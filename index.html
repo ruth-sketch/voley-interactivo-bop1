@@ -1,0 +1,644 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vóley Interactivo | BOP N.º 1</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #101d31;
+    color: white;
+    text-align: center;
+  }
+  header { padding: 24px 12px 12px; }
+  h1 { margin: 0 0 8px; font-size: 28px; }
+  p { color: #cbd5e1; }
+  main { max-width: 900px; margin: auto; padding: 15px; }
+  .panel {
+    background: #1e3049;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  .score {
+    display: flex;
+    justify-content: center;
+    gap: 35px;
+    font-size: 24px;
+    font-weight: bold;
+  }
+  .court {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #168365;
+    border: 4px solid white;
+    border-radius: 8px;
+    min-height: 290px;
+    overflow: hidden;
+  }
+  .team {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    align-items: center;
+    justify-items: center;
+    padding: 12px;
+    gap: 10px;
+  }
+  .team:first-child { border-right: 4px dashed white; }
+  .player {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 3px solid white;
+    background: #facc15;
+    color: #172033;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    position: relative;
+  }
+  .team-b .player { background: #93c5fd; }
+  .player.active {
+    outline: 4px solid #fb923c;
+    outline-offset: 3px;
+  }
+  
+
+/* La pelota se dibuja solamente
+   mediante pelota-viajera */
+.player.active::after {
+    content: none;
+}
+
+
+@keyframes pelotaLlega {
+    0% {
+        transform: translate(-35px, -30px) scale(0.5);
+        opacity: 0;
+    }
+    60% {
+        transform: translate(0, -12px) scale(1.3);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+}
+
+  button.action {
+    background: #38bdf8;
+    color: #082032;
+    border: none;
+    border-radius: 9px;
+    padding: 12px 17px;
+    margin: 5px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  button.action:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+  }
+  .secondary { background: #facc15 !important; }
+  #status { font-weight: bold; color: #fde68a; }
+  video {
+    width: 100%;
+    max-height: 400px;
+    background: black;
+    border-radius: 10px;
+    margin-top: 15px;
+  }
+  input { max-width: 100%; }
+  small { color: #cbd5e1; }
+  
+/* Pelota que viaja entre jugadores */
+.court {
+    position: relative;
+}
+
+.pelota-viajera {
+    position: absolute;
+    z-index: 20;
+    font-size: 27px;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transition:
+        left 0.65s ease-in-out,
+        top 0.65s ease-in-out;
+}
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏐 Vóley Interactivo</h1>
+  <p>Laboratorio de Juegos Deportivos | 3.º D | BOP N.º 1</p>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="score">
+      <div>Equipo A: <span id="scoreA">0</span></div>
+      <div>Equipo B: <span id="scoreB">0</span></div>
+    </div>
+    <p id="status">Turno del equipo A. Elegí un jugador.</p>
+    <p>Toques: <span id="touches">0</span> / 3</p>
+
+    <div class="court">
+      <div class="team team-a" id="teamA"></div>
+      <div class="team team-b" id="teamB"></div>
+    </div>
+    
+<p id="history">Todavía no hay pases.</p>
+
+
+    
+<div id="celebracion" style="
+  display:none;
+  background:linear-gradient(135deg,#172554,#7c3aed);
+  border:3px solid gold;
+  border-radius:18px;
+  padding:25px;
+  margin:20px 0;
+  text-align:center;
+">
+  <h2 style="font-size:36px;">🏆 ¡CAMPEONES! 🎉</h2>
+
+  <h3 id="equipoGanador"></h3>
+
+  <p id="resultadoFinal"></p>
+
+  <button class="action" id="jugarOtraVez">
+    🔄 Jugar otra vez
+  </button>
+</div>
+
+    
+    <button class="action secondary"
+          id="verJugadaBtn"
+          disabled>
+      🎬 Ver jugada real
+    </button>
+
+
+    <button class="action" id="sendBtn" disabled>
+      Enviar al otro equipo
+    </button>
+    
+    <button class="action secondary" id="pointBtn">
+      🏐 Pelota al suelo
+    </button>
+
+    <button class="action" id="resetBtn">
+      Reiniciar partido
+    </button>
+  </section>
+
+  <section class="panel">
+    <h2>🎬 Jugadas reales de 3.º D</h2>
+    <p>Elegí un video filmado por los estudiantes.</p>
+
+    <input type="file" id="videoInput" accept="video/*">
+    <video id="videoPlayer" controls playsinline></video>
+    
+<div id="desafio1" class="panel" style="margin-top:20px;">
+
+  <h2>🏐 Desafío 1: ¿Cómo evitar que caiga la pelota?</h2>
+
+  <p>
+    Observá la jugada 1.
+    Cuando la pelota se dirige hacia un espacio libre,
+    ¿qué debería hacer el equipo?
+  </p>
+
+  <button class="action" onclick="responderDesafio1(false)">
+    A. Quedarse esperando en su posición.
+  </button>
+
+  <button class="action" onclick="responderDesafio1(true)">
+    B. Desplazarse y prepararse para recibirla.
+  </button>
+
+  <button class="action" onclick="responderDesafio1(false)">
+    C. Esperar a que la pelota toque el suelo.
+  </button>
+
+  <p id="resultadoDesafio1"></p>
+
+</div>
+
+    
+    <div style="margin-top:15px;">
+    <h3>🏐 Videoteca de jugadas – 3.º D</h3>
+
+    <select id="selectorJugadas">
+      <option value="">Seleccionar una jugada</option>
+    </select>
+
+  <button id="cargarJugadaBtn" type="button">
+    🎬 Ver jugada seleccionada
+  </button>
+</div>
+
+
+    <p><small>El video se carga localmente en el navegador.
+    No se publica automáticamente en internet.</small></p>
+  </section>
+</main>
+
+
+<script>
+const teamA = document.getElementById("teamA");
+const teamB = document.getElementById("teamB");
+const status = document.getElementById("status");
+const historyText = document.getElementById("history");
+const touchesText = document.getElementById("touches");
+const sendBtn = document.getElementById("sendBtn");
+
+let currentTeam = "A";
+let holder = null;
+let touches = 0;
+let scoreA = 0;
+let scoreB = 0;
+let history = [];
+
+function createPlayers() {
+  teamA.innerHTML = "";
+  teamB.innerHTML = "";
+
+  for (const team of ["A", "B"]) {
+    const container = team === "A" ? teamA : teamB;
+
+    for (let number = 1; number <= 6; number++) {
+      const player = document.createElement("button");
+      player.className = "player";
+      player.textContent = number;
+      player.setAttribute(
+        "aria-label",
+        `Jugador ${number} del equipo ${team}`
+      );
+
+      player.addEventListener("click", () => {
+        selectPlayer(team, number);
+      });
+
+      container.appendChild(player);
+    }
+  }
+}
+
+function selectPlayer(team, number) {
+  if (team !== currentTeam) {
+    status.textContent = "Es el turno del otro equipo.";
+    return;
+  }
+
+  const key = team + number;
+
+  if (holder === key) return;
+
+  if (touches >= 3) {
+    status.textContent = "Ya realizaron tres toques. Enviá la pelota.";
+    return;
+  }
+
+  holder = key;
+  touches++;
+  history.push(key);
+
+  update();
+}
+
+
+
+function update() {
+  document.getElementById("scoreA").textContent = scoreA;
+  document.getElementById("scoreB").textContent = scoreB;
+
+  touchesText.textContent = touches;
+
+  const ganador =
+    scoreA >= 5 && scoreA - scoreB >= 2 ? "A" :
+    scoreB >= 5 && scoreB - scoreA >= 2 ? "B" :
+    null;
+
+  document.querySelectorAll(".player").forEach(player => {
+    player.classList.remove("active");
+    player.disabled = Boolean(ganador);
+  });
+
+  if (holder) {
+    const team = holder[0];
+    const number = Number(holder.slice(1));
+    const container = team === "A" ? teamA : teamB;
+
+    container.children[number - 1].classList.add("active");
+  }
+
+  historyText.textContent = history.length
+    ? "Secuencia: " + history.join(" → ")
+    : "Todavía no hay pases.";
+
+  sendBtn.disabled = ganador !== null || holder === null;
+
+  document.getElementById("verJugadaBtn").disabled =
+    touches < 1;
+
+  document.getElementById("pointBtn").disabled =
+    ganador !== null;
+
+  if (ganador) {
+    
+    document.getElementById("celebracion").style.display = "block";
+
+    document.getElementById("equipoGanador").textContent =
+      ganador === "A"
+        ? "💛 EQUIPO AMARILLO"
+        : "💙 EQUIPO AZUL";
+
+    document.getElementById("resultadoFinal").textContent =
+      "Resultado final: " + scoreA + " - " + scoreB;
+
+    status.textContent =
+      "🏆 ¡GANÓ EL EQUIPO " +
+      (ganador === "A" ? "AMARILLO" : "AZUL") +
+      "! Resultado: " + scoreA + " - " + scoreB;
+  } else {
+    document.getElementById("celebracion").style.display = "none";
+    status.textContent =
+      `Turno del equipo ${currentTeam}. Toques realizados: ${touches}.`;
+  }
+}
+
+
+
+
+sendBtn.addEventListener("click", () => {
+  if (!holder) return;
+
+  currentTeam = currentTeam === "A" ? "B" : "A";
+  holder = null;
+  touches = 0;
+  history.push("Pelota enviada");
+  update();
+});
+
+document.getElementById("pointBtn").addEventListener("click", () => {
+  
+if (currentTeam === "A") {
+  scoreB++;
+} else {
+  scoreA++;
+}
+
+
+  holder = null;
+  touches = 0;
+  history.push("🏐 Punto para el equipo " +
+  (currentTeam === "A" ? "AZUL" : "AMARILLO"));
+
+  update();
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  currentTeam = "A";
+  holder = null;
+  touches = 0;
+  scoreA = 0;
+  scoreB = 0;
+  history = [];
+  update();
+});
+
+const videoInput = document.getElementById("videoInput");
+const videoPlayer = document.getElementById("videoPlayer");
+let videoURL = null;
+
+videoInput.addEventListener("change", () => {
+  const file = videoInput.files[0];
+  if (!file) return;
+
+  if (videoURL) URL.revokeObjectURL(videoURL);
+  videoURL = URL.createObjectURL(file);
+  videoPlayer.src = videoURL;
+});
+
+createPlayers();
+update();
+
+/* Animación de pases entre jugadores */
+
+const cancha = document.querySelector(".court");
+
+const pelotaAnimada = document.createElement("div");
+pelotaAnimada.className = "pelota-viajera";
+pelotaAnimada.textContent = "🏐";
+pelotaAnimada.style.display = "none";
+
+cancha.appendChild(pelotaAnimada);
+
+let jugadorAnterior = null;
+
+document.getElementById("sendBtn")
+    .addEventListener("click", () => {
+        jugadorAnterior = null;
+        pelotaAnimada.style.display = "none";
+    });
+
+document.getElementById("resetBtn")
+    .addEventListener("click", () => {
+        jugadorAnterior = null;
+        pelotaAnimada.style.display = "none";
+    });
+
+document.getElementById("pointBtn")
+    .addEventListener("click", () => {
+        jugadorAnterior = null;
+        pelotaAnimada.style.display = "none";
+    });
+
+
+function animarPase(jugadorActual) {
+    const rectCancha = cancha.getBoundingClientRect();
+    const rectJugador = jugadorActual.getBoundingClientRect();
+
+    const destinoX =
+        rectJugador.left - rectCancha.left +
+        rectJugador.width / 2;
+
+    const destinoY =
+        rectJugador.top - rectCancha.top +
+        rectJugador.height / 2;
+
+    if (jugadorAnterior) {
+        const inicioX = jugadorAnterior.x;
+        const inicioY = jugadorAnterior.y;
+
+        const distancia = Math.hypot(
+            destinoX - inicioX,
+            destinoY - inicioY
+        );
+
+        const altura = Math.max(35, distancia * 0.35);
+
+        pelotaAnimada.style.display = "block";
+
+        // Desactivar la transición lineal anterior.
+        pelotaAnimada.style.transition = "none";
+
+        // Cancelar una animación anterior.
+        if (pelotaAnimada.animacionActual) {
+            pelotaAnimada.animacionActual.cancel();
+        }
+
+        const puntos = [];
+
+        // Crear una trayectoria parabólica.
+        for (let i = 0; i <= 30; i++) {
+            const t = i / 30;
+
+            const x = inicioX + (destinoX - inicioX) * t;
+            const y = inicioY +
+                (destinoY - inicioY) * t -
+                4 * altura * t * (1 - t);
+
+            puntos.push({
+                left: x + "px",
+                top: y + "px"
+            });
+        }
+
+        pelotaAnimada.animacionActual =
+            pelotaAnimada.animate(puntos, {
+                duration: 850,
+                easing: "linear",
+                fill: "forwards"
+            });
+
+        // Guardar la posición final.
+        pelotaAnimada.animacionActual.onfinish = () => {
+            pelotaAnimada.style.left = destinoX + "px";
+            pelotaAnimada.style.top = destinoY + "px";
+            pelotaAnimada.animacionActual.cancel();
+            pelotaAnimada.animacionActual = null;
+        };
+
+    } else {
+        // Mostrar la pelota en el primer jugador.
+        pelotaAnimada.style.display = "block";
+        pelotaAnimada.style.transition = "none";
+        pelotaAnimada.style.left = destinoX + "px";
+        pelotaAnimada.style.top = destinoY + "px";
+    }
+
+    jugadorAnterior = {
+        x: destinoX,
+        y: destinoY
+    };
+}
+
+
+/* Detectar los pases */
+document.querySelectorAll(".player").forEach(jugador => {
+    jugador.addEventListener("click", () => {
+        if (!jugador.classList.contains("active")) return;
+        animarPase(jugador);
+    });
+});
+
+/* Ver la jugada real después de tres toques */
+
+const verJugadaBtn =
+    document.getElementById("verJugadaBtn");
+
+verJugadaBtn.addEventListener("click", () => {
+    const video = document.getElementById("videoPlayer");
+
+    if (!video.src) {
+        alert("Primero seleccioná un video de los alumnos.");
+        return;
+    }
+
+    video.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+
+    video.currentTime = 0;
+    video.play().catch(() => {
+        alert("Presioná Play para reproducir el video.");
+    });
+});
+  
+/* Videoteca de las 8 jugadas de vóley */
+
+const selectorJugadas =
+    document.getElementById("selectorJugadas");
+
+const cargarJugadaBtn =
+    document.getElementById("cargarJugadaBtn");
+
+const reproductorJugadas =
+    document.querySelector("video");
+
+for (let i = 1; i <= 8; i++) {
+    const opcion = document.createElement("option");
+
+    opcion.value = "videos/voley" + i + ".mp4";
+    opcion.textContent = "🏐 Jugada " + i;
+
+    selectorJugadas.appendChild(opcion);
+}
+
+cargarJugadaBtn.addEventListener("click", () => {
+    if (!selectorJugadas.value) {
+        alert("Primero seleccioná una jugada.");
+        return;
+    }
+
+    reproductorJugadas.pause();
+    reproductorJugadas.src = selectorJugadas.value;
+    reproductorJugadas.load();
+
+    reproductorJugadas.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+
+    reproductorJugadas.play().catch(() => {
+        alert("Presioná Play para ver la jugada.");
+    });
+});
+
+document.getElementById("jugarOtraVez")
+  .addEventListener("click", () => {
+    document.getElementById("resetBtn").click();
+  });
+function responderDesafio1(correcta) {
+  const resultado =
+    document.getElementById("resultadoDesafio1");
+
+  if (correcta) {
+    resultado.textContent =
+      "✅ ¡Muy bien! Los jugadores deben anticipar " +
+      "la trayectoria, comunicarse y desplazarse " +
+      "para mantener la pelota en juego.";
+    resultado.style.color = "#86efac";
+  } else {
+    resultado.textContent =
+      "❌ Intentá nuevamente. Observá cómo " +
+      "se desplazan los jugadores para recibir la pelota.";
+    resultado.style.color = "#fca5a5";
+  }
+}
+
+</script>
+</body>
+</html>
